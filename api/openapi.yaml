@@ -1,0 +1,654 @@
+openapi: 3.1.0
+info:
+  title: IndiQR API
+  version: 1.0.0
+  description: |
+    Plataforma de marketing por indicação com remuneração por conversão.
+    Três perfis: Admin (empresa), Influenciador, Vendedor.
+
+servers:
+  - url: https://indiqr-api.lealcyber.com/api/v1
+    description: Produção
+  - url: http://localhost:8000/api/v1
+    description: Local
+
+security:
+  - bearerAuth: []
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    # ── Usuário ──────────────────────────────────────────────────────────────
+    User:
+      type: object
+      required: [id, email, roles]
+      properties:
+        id:     { type: integer }
+        email:  { type: string, format: email }
+        roles:  { type: array, items: { type: string } }
+
+    # ── Company ───────────────────────────────────────────────────────────────
+    Company:
+      type: object
+      required: [id, name, slug, created_at]
+      properties:
+        id:         { type: integer }
+        name:       { type: string }
+        slug:       { type: string }
+        created_at: { type: string, format: date-time }
+
+    CompanyCreate:
+      type: object
+      required: [name, slug]
+      properties:
+        name: { type: string, minLength: 1 }
+        slug: { type: string, minLength: 1, pattern: '^[a-z0-9-]+$' }
+
+    Member:
+      type: object
+      required: [usuario_id, email, role, joined_at]
+      properties:
+        usuario_id: { type: integer }
+        email:      { type: string, format: email }
+        role:       { type: string, enum: [admin, influenciador, vendedor] }
+        joined_at:  { type: string, format: date-time }
+
+    InvitationCreate:
+      type: object
+      required: [email, role]
+      properties:
+        email: { type: string, format: email }
+        role:  { type: string, enum: [influenciador, vendedor] }
+
+    Invitation:
+      type: object
+      required: [id, email, role, status, created_at]
+      properties:
+        id:         { type: integer }
+        email:      { type: string, format: email }
+        role:       { type: string, enum: [influenciador, vendedor] }
+        status:     { type: string, enum: [pending, accepted, revoked] }
+        created_at: { type: string, format: date-time }
+
+    InvitationPreview:
+      type: object
+      required: [company_name]
+      properties:
+        company_name: { type: string }
+        role:         { type: string, enum: [influenciador, vendedor] }
+
+    # ── Campaign ──────────────────────────────────────────────────────────────
+    Campaign:
+      type: object
+      required: [id, name, status, remuneracao_modelo, remuneracao_valor, created_at]
+      properties:
+        id:                  { type: integer }
+        name:                { type: string }
+        company_id:          { type: integer }
+        influenciador_id:    { type: integer, nullable: true }
+        influenciador_email: { type: string, format: email, nullable: true }
+        status:
+          type: string
+          enum: [aguardando_aceite, ativa, encerrada]
+        remuneracao_modelo:
+          type: string
+          enum: [fixo, percentual]
+        remuneracao_valor:   { type: number, format: float }
+        desconto_pct:        { type: number, format: float, nullable: true }
+        created_at:          { type: string, format: date-time }
+        updated_at:          { type: string, format: date-time }
+
+    CampaignCreate:
+      type: object
+      required: [name, influenciador_email, remuneracao_modelo, remuneracao_valor]
+      properties:
+        name:
+          type: string
+          minLength: 1
+        influenciador_email:
+          type: string
+          format: email
+        remuneracao_modelo:
+          type: string
+          enum: [fixo, percentual]
+        remuneracao_valor:
+          type: number
+          format: float
+          exclusiveMinimum: 0
+        desconto_pct:
+          type: number
+          format: float
+          nullable: true
+          exclusiveMinimum: 0
+          maximum: 100
+
+    CampaignSummary:
+      type: object
+      required: [id, name, status, remuneracao_modelo, remuneracao_valor]
+      properties:
+        id:                 { type: integer }
+        name:               { type: string }
+        status:             { type: string, enum: [aguardando_aceite, ativa, encerrada] }
+        remuneracao_modelo: { type: string, enum: [fixo, percentual] }
+        remuneracao_valor:  { type: number }
+        desconto_pct:       { type: number, nullable: true }
+
+    # ── Conversion ────────────────────────────────────────────────────────────
+    ConversionValidateRequest:
+      type: object
+      required: [qrcode_token, valor_bruto]
+      properties:
+        qrcode_token:
+          type: string
+          format: uuid
+        valor_bruto:
+          type: number
+          format: float
+          exclusiveMinimum: 0
+
+    ConversionPreview:
+      type: object
+      description: Resumo mostrado ao vendedor antes da confirmação
+      required: [campaign_name, influenciador_email, valor_bruto, desconto_valor, valor_final_cliente, remuneracao_valor]
+      properties:
+        campaign_name:       { type: string }
+        influenciador_email: { type: string, format: email }
+        valor_bruto:         { type: number }
+        desconto_valor:      { type: number }
+        valor_final_cliente: { type: number }
+        remuneracao_valor:   { type: number }
+
+    Conversion:
+      type: object
+      required: [id, campaign_id, influenciador_id, vendedor_id, valor_bruto, desconto_valor, remuneracao_valor, created_at]
+      properties:
+        id:               { type: integer }
+        campaign_id:      { type: integer }
+        campaign_name:    { type: string }
+        influenciador_id: { type: integer }
+        vendedor_id:      { type: integer }
+        valor_bruto:      { type: number }
+        desconto_valor:   { type: number }
+        remuneracao_valor:{ type: number }
+        created_at:       { type: string, format: date-time }
+
+    # ── Erros ─────────────────────────────────────────────────────────────────
+    Error:
+      type: object
+      required: [detail]
+      properties:
+        detail: { type: string }
+
+paths:
+  # ── Health ──────────────────────────────────────────────────────────────────
+  /health:
+    get:
+      tags: [Health]
+      summary: Health check
+      security: []
+      responses:
+        '200':
+          description: API online
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:  { type: string, example: online }
+                  service: { type: string, example: IndiQR API }
+
+  # ── User ────────────────────────────────────────────────────────────────────
+  /user/me:
+    get:
+      tags: [User]
+      summary: Dados do usuário autenticado
+      responses:
+        '200':
+          description: Usuário atual
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/User' }
+        '401':
+          description: Não autenticado
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  # ── Companies ────────────────────────────────────────────────────────────────
+  /companies/:
+    get:
+      tags: [Companies]
+      summary: Listar empresas do usuário
+      responses:
+        '200':
+          description: Lista de empresas
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Company' }
+
+    post:
+      tags: [Companies]
+      summary: Criar empresa (admin only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CompanyCreate' }
+      responses:
+        '201':
+          description: Empresa criada
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Company' }
+        '409':
+          description: Slug já em uso
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /companies/{company_id}/members:
+    get:
+      tags: [Companies]
+      summary: Listar membros da empresa
+      parameters:
+        - name: company_id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Lista de membros
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Member' }
+        '403':
+          description: Sem acesso
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /companies/{company_id}/members/{usuario_id}:
+    delete:
+      tags: [Companies]
+      summary: Remover membro da empresa
+      parameters:
+        - name: company_id
+          in: path
+          required: true
+          schema: { type: integer }
+        - name: usuario_id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '204':
+          description: Membro removido
+        '403':
+          description: Sem permissão
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '404':
+          description: Membro não encontrado
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /companies/{company_id}/invitations:
+    post:
+      tags: [Companies]
+      summary: Convidar membro
+      parameters:
+        - name: company_id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/InvitationCreate' }
+      responses:
+        '201':
+          description: Convite enviado
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Invitation' }
+        '409':
+          description: Usuário já é membro
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+    get:
+      tags: [Companies]
+      summary: Listar convites da empresa
+      parameters:
+        - name: company_id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Lista de convites
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Invitation' }
+
+  /companies/{company_id}/invitations/{invitation_id}:
+    delete:
+      tags: [Companies]
+      summary: Revogar convite pendente
+      parameters:
+        - name: company_id
+          in: path
+          required: true
+          schema: { type: integer }
+        - name: invitation_id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '204':
+          description: Convite revogado
+        '404':
+          description: Convite não encontrado
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /companies/invitations/preview/{token}:
+    get:
+      tags: [Companies]
+      summary: Preview do convite (público, sem auth)
+      security: []
+      parameters:
+        - name: token
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Dados do convite
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/InvitationPreview' }
+        '404':
+          description: Convite inválido ou revogado
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /companies/invitations/{token}/accept:
+    post:
+      tags: [Companies]
+      summary: Aceitar convite
+      parameters:
+        - name: token
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Convite aceito
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Member' }
+        '404':
+          description: Convite inválido
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '409':
+          description: Usuário já é membro
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  # ── Campaigns ────────────────────────────────────────────────────────────────
+  /campaigns/:
+    get:
+      tags: [Campaigns]
+      summary: Listar campanhas (filtrado por role)
+      responses:
+        '200':
+          description: Lista de campanhas
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/CampaignSummary' }
+
+    post:
+      tags: [Campaigns]
+      summary: Criar campanha (admin only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CampaignCreate' }
+      responses:
+        '201':
+          description: Campanha criada
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Campaign' }
+        '404':
+          description: Influenciador não encontrado na plataforma
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '403':
+          description: Sem permissão
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /campaigns/{campaign_id}:
+    get:
+      tags: [Campaigns]
+      summary: Detalhe da campanha
+      parameters:
+        - name: campaign_id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Campanha
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Campaign' }
+        '403':
+          description: Sem acesso
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '404':
+          description: Não encontrada
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+    delete:
+      tags: [Campaigns]
+      summary: Encerrar campanha (admin) ou sair da campanha (influenciador)
+      parameters:
+        - name: campaign_id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Campanha encerrada
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Campaign' }
+        '422':
+          description: Campanha já encerrada
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /campaigns/{campaign_id}/accept:
+    post:
+      tags: [Campaigns]
+      summary: Aceitar convite de campanha (influenciador)
+      parameters:
+        - name: campaign_id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Campanha aceita; QRCode gerado
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Campaign' }
+        '422':
+          description: Campanha não está aguardando aceite
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /campaigns/{campaign_id}/decline:
+    post:
+      tags: [Campaigns]
+      summary: Recusar convite de campanha (influenciador)
+      parameters:
+        - name: campaign_id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Campanha recusada
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Campaign' }
+        '422':
+          description: Campanha não está aguardando aceite
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /campaigns/{campaign_id}/qrcode:
+    get:
+      tags: [Campaigns]
+      summary: Download do QRCode em PNG (influenciador)
+      parameters:
+        - name: campaign_id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Imagem PNG do QRCode
+          content:
+            image/png:
+              schema: { type: string, format: binary }
+        '403':
+          description: Sem acesso ou campanha não ativa
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /campaigns/{campaign_id}/card.pdf:
+    get:
+      tags: [Campaigns]
+      summary: Download do cartão PDF com QRCode (influenciador)
+      parameters:
+        - name: campaign_id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: PDF do cartão de divulgação
+          content:
+            application/pdf:
+              schema: { type: string, format: binary }
+        '403':
+          description: Sem acesso ou campanha não ativa
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /campaigns/{campaign_id}/conversions:
+    get:
+      tags: [Campaigns]
+      summary: Listar conversões de uma campanha
+      parameters:
+        - name: campaign_id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Lista de conversões
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Conversion' }
+        '403':
+          description: Sem acesso
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  # ── Conversions ───────────────────────────────────────────────────────────────
+  /conversions/validate:
+    post:
+      tags: [Conversions]
+      summary: Validar QRCode e registrar conversão (vendedor)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ConversionValidateRequest' }
+      responses:
+        '201':
+          description: Conversão registrada
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Conversion' }
+        '404':
+          description: QRCode não encontrado
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '422':
+          description: QRCode inativo ou campanha não ativa
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /conversions/:
+    get:
+      tags: [Conversions]
+      summary: Listar conversões (filtrado por role)
+      parameters:
+        - name: campaign_id
+          in: query
+          required: false
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Lista de conversões
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Conversion' }
