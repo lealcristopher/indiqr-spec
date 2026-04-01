@@ -174,7 +174,7 @@ components:
         vendedor_id:      { type: integer }
         valor_bruto:      { type: number }
         desconto_valor:   { type: number }
-        remuneracao_valor:{ type: number }
+        remuneracao_valor: { type: number }
         created_at:       { type: string, format: date-time }
 
     # ── Erros ─────────────────────────────────────────────────────────────────
