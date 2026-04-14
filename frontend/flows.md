@@ -184,3 +184,50 @@ indiqr-vendedor     → /vender
 Usuário sem role    → tela "Aguardando acesso"
                       (conta criada mas ainda não convidado)
 ```
+
+---
+
+## Fluxo 7 — Gerar Código de Resgate (Influenciador)
+
+```
+Influenciador → /resgates
+    └─ Vê cards de saldo:
+       "Saldo em R$: R$ 120,00"
+       "Saldo em pontos: 450 pts"
+    └─ Clica "Solicitar Resgate"
+    └─ Seleciona tipo: R$ ou pontos
+    └─ Informa valor (≤ saldo disponível)
+    └─ Clica "Gerar Código"
+    └─ POST /redemptions/tokens → { valor, tipo }
+    └─ Tela de código ativo:
+       - Código numérico grande: "483 921"
+       - Countdown 15 min
+       - Instrução: "Mostre ao vendedor"
+       - Botão "Cancelar código"
+    └─ Código usado pelo vendedor → status "usado" → tela de confirmação
+    └─ Código expirado → tela de expiração → opção de gerar novo
+```
+
+---
+
+## Fluxo 8 — Registrar Resgate (Vendedor)
+
+```
+Vendedor → /vender → aba "Resgate"
+    └─ Campo: "Código de resgate (6 dígitos)"
+    └─ Digita código numérico fornecido pelo influenciador
+    └─ GET /redemptions/preview?code=483921
+    └─ Prévia exibida:
+       Influenciador: joao@email.com
+       Valor: R$ 50,00
+       Tipo: Reais
+    └─ Botão "Confirmar" | "Cancelar"
+    └─ POST /redemptions/validate { code: "483921" }
+    └─ Tela de sucesso: "Resgate de R$ 50,00 registrado!"
+    └─ Botão "Novo resgate"
+
+Erros tratados:
+    → Código não encontrado: "Código inválido. Verifique com o influenciador."
+    → Código expirado: "Código expirado. Peça ao influenciador um novo código."
+    → Código já usado: "Código já utilizado."
+```
