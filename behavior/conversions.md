@@ -1,10 +1,20 @@
 # Conversions — Regras de Negócio
 
-## Fluxo de Validação (App do Vendedor)
+## Fluxo de Validação — Web (Short Token)
+
+1. Vendedor acessa `/vender` (autenticado via Auth0)
+2. Vendedor digita o `short_token` da campanha (6 chars, ex: `XpT250`) — obtido com o influenciador
+3. Vendedor informa o `valor_bruto` da compra
+4. Sistema exibe tela de confirmação com os dados informados
+5. Vendedor confirma → `POST /conversions/validate` com `{ qrcode_token: shortToken, valor_bruto }`
+6. API valida, calcula e retorna a conversão criada com desconto e remuneração
+7. Tela de sucesso exibe breakdown: valor bruto, desconto, valor líquido, comissão
+
+## Fluxo de Validação — App Mobile (QR Scan) — Pós-MVP
 
 1. Vendedor abre o app (autenticado via Auth0)
 2. Vendedor informa o `valor_bruto` da compra
-3. Vendedor escaneia o QRCode apresentado pelo cliente
+3. Vendedor escaneia o QRCode apresentado pelo influenciador/cliente
 4. Sistema valida:
    - QRCode existe e está `active=True`
    - Campanha associada está com status `ativa`
@@ -13,7 +23,6 @@
    - Desconto aplicado ao cliente (valor em R$, se houver)
    - Valor final a cobrar do cliente
    - Remuneração calculada para o influenciador
-   - Nome da campanha e do influenciador
 6. Vendedor confirma com botão explícito
 7. Conversão registrada; app exibe confirmação
 
@@ -64,8 +73,8 @@ Cada conversão contém:
 
 | Situação | HTTP | Mensagem |
 |----------|------|---------|
-| QRCode não encontrado | 404 | QRCode inválido |
-| QRCode inativo (`active=False`) | 422 | Campanha encerrada — QRCode inválido |
+| UUID ou short_token não encontrado | 404 | QRCode inválido |
+| QRCode inativo (`active=False`) | 404 | QRCode inválido ou inativo |
 | Campanha não está `ativa` | 422 | Campanha não está ativa |
 | `valor_bruto` ≤ 0 | 422 | Valor inválido |
 

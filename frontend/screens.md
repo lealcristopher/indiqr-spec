@@ -164,3 +164,73 @@ Todas as rotas protegidas redirecionam para Auth0 Universal Login se não autent
 | Sessão expirada | Redirect automático para login Auth0 |
 | Role sem acesso | Redirect para `/` (rota adequada à role) |
 | Empty state | Ilustração + CTA contextual |
+
+---
+
+## Resgates — Influenciador e Vendedor
+
+### Tela: Meu Saldo e Resgates (Influenciador) — `/resgates`
+
+**Seção Saldo:**
+- Card "Saldo em R$": valor disponível (conversões reais − resgates reais)
+- Card "Saldo em pontos": valor disponível (conversões pts − resgates pts)
+- Ambos ocultos se zero
+
+**Seção Código Ativo (se existir):**
+- Exibição do código ativo:
+  ```
+  💳 CÓDIGO DE RESGATE
+       483 921
+  Válido por: 12:43
+  R$ 50,00 · Reais
+  [Cancelar código]
+  ```
+- Countdown em tempo real
+- Ao expirar: mensagem + botão "Gerar novo"
+
+**Botão "Solicitar Resgate"** (apenas se saldo > 0):
+- Modal ou página com:
+  - Radio: R$ | Pontos (ocultar opções sem saldo)
+  - Campo valor (numérico, ≤ saldo selecionado)
+  - Botão "Gerar Código"
+
+**Histórico de Resgates:**
+- Lista cronológica: valor, tipo, vendedor que confirmou, data
+- Somente leitura
+
+---
+
+### Tela: Registrar Resgate (Vendedor) — aba em `/vender`
+
+A tela `/vender` passa a ter dois modos selecionáveis no topo:
+
+```
+[ 💰 Venda ] [ 💳 Resgate ]
+```
+
+**Modo Resgate:**
+
+Passo 1 — Código:
+- Campo grande: "Código de resgate (6 dígitos)"
+- Teclado numérico (mobile-first)
+- Botão "Verificar"
+
+Passo 2 — Prévia:
+- Card:
+  - Influenciador: [email]
+  - Valor: R$ XX,XX ou XXX pts
+- Botão "Confirmar resgate" (verde) | "Cancelar"
+
+Passo 3 — Confirmação:
+- "Resgate registrado com sucesso!"
+- Valor e influenciador
+- Botão "Novo resgate"
+
+---
+
+### Painel Admin — Resgates da Empresa
+
+Adicionado ao painel `/empresas/:id`:
+- Nova aba **Resgates** (ao lado de Campanhas)
+- Tabela: influenciador, valor, tipo (R$/pts), vendedor que confirmou, data
+- Totais no card "Visão Geral": saldo pendente por influenciador

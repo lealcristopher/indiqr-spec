@@ -54,7 +54,8 @@ app/
 │   ├── user.py              # GET /user/me
 │   ├── companies.py         # Empresas + membros + convites
 │   ├── campaigns.py         # Campanhas + QRCode + PDF
-│   └── conversions.py       # Validação + registro
+│   ├── conversions.py       # Validação + registro
+│   └── redemptions.py      # Geração de OTP + resgate
 ├── database/
 │   └── postgres.py          # Engine + SessionLocal
 ├── models/
@@ -103,6 +104,18 @@ Campaign
 Conversion   ← imutável após insert, sem updated_at
   id, campaign_id, qrcode_id, influenciador_id, vendedor_id
   valor_bruto, desconto_valor, remuneracao_valor (Numeric)
+  created_at
+
+ResgateToken
+  id, influenciador_id
+  valor (Numeric), tipo: reais|pontos
+  code: CHAR(6) numérico, único entre pendentes
+  status: pendente|usado|expirado
+  expires_at (created_at + 15 min), created_at
+
+Resgate   ← imutável após insert, sem updated_at
+  id, resgate_token_id, influenciador_id, vendedor_id
+  valor (Numeric), tipo: reais|pontos
   created_at
 ```
 
