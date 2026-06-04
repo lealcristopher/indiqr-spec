@@ -177,6 +177,67 @@ components:
         remuneracao_valor: { type: number }
         created_at:       { type: string, format: date-time }
 
+    # ── Pagination ───────────────────────────────────────────────────────────
+    PaginatedCompany:
+      type: object
+      required: [items, total, page, page_size, pages]
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/Company' }
+        total:     { type: integer }
+        page:      { type: integer }
+        page_size: { type: integer }
+        pages:     { type: integer }
+
+    PaginatedMember:
+      type: object
+      required: [items, total, page, page_size, pages]
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/Member' }
+        total:     { type: integer }
+        page:      { type: integer }
+        page_size: { type: integer }
+        pages:     { type: integer }
+
+    PaginatedInvitation:
+      type: object
+      required: [items, total, page, page_size, pages]
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/Invitation' }
+        total:     { type: integer }
+        page:      { type: integer }
+        page_size: { type: integer }
+        pages:     { type: integer }
+
+    PaginatedCampaignSummary:
+      type: object
+      required: [items, total, page, page_size, pages]
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/CampaignSummary' }
+        total:     { type: integer }
+        page:      { type: integer }
+        page_size: { type: integer }
+        pages:     { type: integer }
+
+    PaginatedConversion:
+      type: object
+      required: [items, total, page, page_size, pages]
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/Conversion' }
+        total:     { type: integer }
+        page:      { type: integer }
+        page_size: { type: integer }
+        pages:     { type: integer }
+
     # ── Erros ─────────────────────────────────────────────────────────────────
     Error:
       type: object
@@ -224,14 +285,28 @@ paths:
     get:
       tags: [Companies]
       summary: Listar empresas do usuário
+      parameters:
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: page_size
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
       responses:
         '200':
-          description: Lista de empresas
+          description: Lista paginada de empresas
           content:
             application/json:
-              schema:
-                type: array
-                items: { $ref: '#/components/schemas/Company' }
+              schema: { $ref: '#/components/schemas/PaginatedCompany' }
 
     post:
       tags: [Companies]
@@ -262,14 +337,27 @@ paths:
           in: path
           required: true
           schema: { type: integer }
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: page_size
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
       responses:
         '200':
-          description: Lista de membros
+          description: Lista paginada de membros
           content:
             application/json:
-              schema:
-                type: array
-                items: { $ref: '#/components/schemas/Member' }
+              schema: { $ref: '#/components/schemas/PaginatedMember' }
         '403':
           description: Sem acesso
           content:
@@ -337,14 +425,27 @@ paths:
           in: path
           required: true
           schema: { type: integer }
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: page_size
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
       responses:
         '200':
-          description: Lista de convites
+          description: Lista paginada de convites
           content:
             application/json:
-              schema:
-                type: array
-                items: { $ref: '#/components/schemas/Invitation' }
+              schema: { $ref: '#/components/schemas/PaginatedInvitation' }
 
   /companies/{company_id}/invitations/{invitation_id}:
     delete:
@@ -421,14 +522,28 @@ paths:
     get:
       tags: [Campaigns]
       summary: Listar campanhas (filtrado por role)
+      parameters:
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: page_size
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
       responses:
         '200':
-          description: Lista de campanhas
+          description: Lista paginada de campanhas
           content:
             application/json:
-              schema:
-                type: array
-                items: { $ref: '#/components/schemas/CampaignSummary' }
+              schema: { $ref: '#/components/schemas/PaginatedCampaignSummary' }
 
     post:
       tags: [Campaigns]
@@ -594,14 +709,27 @@ paths:
           in: path
           required: true
           schema: { type: integer }
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: page_size
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
       responses:
         '200':
-          description: Lista de conversões
+          description: Lista paginada de conversões
           content:
             application/json:
-              schema:
-                type: array
-                items: { $ref: '#/components/schemas/Conversion' }
+              schema: { $ref: '#/components/schemas/PaginatedConversion' }
         '403':
           description: Sem acesso
           content:
@@ -644,11 +772,24 @@ paths:
           in: query
           required: false
           schema: { type: integer }
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: page_size
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
       responses:
         '200':
-          description: Lista de conversões
+          description: Lista paginada de conversões
           content:
             application/json:
-              schema:
-                type: array
-                items: { $ref: '#/components/schemas/Conversion' }
+              schema: { $ref: '#/components/schemas/PaginatedConversion' }
