@@ -1,6 +1,12 @@
 # Test Coverage Specification — IndiQR
 
-> Last updated: 2026-06-10 by CTO / IND-38
+> Last updated: 2026-06-10 by CTO / [IND-41](/IND/issues/IND-41)
+>
+> P2 test specifications completed:
+> - [membership-requests.md](membership-requests.md) — membership request E2E
+> - [shop-media.md](shop-media.md) — shop media endpoints E2E
+> - [security.md](security.md) — security test layer
+> - `make test-contract` — local Schemathesis target (see repo `Makefile`)
 
 ## Coverage Summary (current)
 
@@ -32,19 +38,19 @@
 
 | Priority | Area | Gap |
 |----------|------|-----|
-| P2 | Membership Request APIs (4 endpoints) | Entire membership request flow untested. |
+| P2 | Membership Request APIs (4 endpoints) | Spec: [membership-requests.md](membership-requests.md) — full flow + decline + cross-company |
 | P2 | `GET /redemptions/tokens/active` | No tests. Active token lookup. |
 | P2 | `GET /redemptions/company` | No tests. Company-scoped resgate listing. |
-| P2 | Shop media endpoints (6 endpoints) | Logo, hero, category image, product image, gallery uploads untested. |
-| P2 | `GET /shop/mine` | No tests. Admin's own shop endpoint. |
+| P2 | Shop media endpoints (6 endpoints) | Spec: [shop-media.md](shop-media.md) — logo, hero, category, product, gallery |
+| P2 | `GET /shop/mine` | Spec: [shop-media.md](shop-media.md) — included in shop flow |
 | P2 | `GET /user/me` | No tests. User profile endpoint. |
 
 ### Missing Test Categories
 
 | Priority | Category | Gap |
 |----------|------|-----|
-| P2 | Security tests | No rate-limiter tests, no OWASP top-10 scan, no token-leakage verification. |
-| P2 | Contract tests (local) | Schemathesis runs only in CI (staging). No local contract test target. |
+| P2 | Security tests | Spec: [security.md](security.md) — OWASP, IDOR, JWT, race conditions, token leakage |
+| P2 | Contract tests (local) | Spec: `make test-contract` in repo `Makefile` — local Schemathesis |
 | P2 | Error path coverage | Many services lack edge-case unit tests (null handling, concurrent access). |
 | P3 | Load/stress tests | No performance baseline or load profile tests. |
 | P3 | UI E2E tests | No frontend e2e tests (Selenium/Playwright). |
@@ -109,11 +115,15 @@
 
 ### 7. Redemptions — E2E Tests (`tests/e2e/test_redemptions_api.py`)
 
+> Spec: [redemptions.md](redemptions.md) § Testes for detailed redemption coverage.
+
 - [ ] `test_get_active_token` — GET /tokens/active returns current pending token
 - [ ] `test_get_active_token_no_active` — returns empty/null when no pending token
 - [ ] `test_list_resgates_company` — GET /company returns company-scoped resgates for admin
 
 ### 8. Shop — E2E Tests (`tests/e2e/test_shop_api.py`)
+
+> Full spec: [shop-media.md](shop-media.md). Summary:
 
 - [ ] `test_get_my_shop` — GET /mine returns admin's shop
 - [ ] `test_get_my_shop_no_shop` — 404 when admin has no shop
@@ -125,20 +135,19 @@
 - [ ] `test_upload_product_gallery_image` — POST gallery image
 - [ ] `test_delete_product_gallery_image` — DELETE gallery image
 - [ ] `test_reorder_product_gallery` — PUT reorder
-- [ ] `test_deploy_shop_full_flow` — create shop with products → deploy → verify URL
+- [ ] `test_shop_full_media_flow` — complete shop lifecycle
 
 ### 9. Security Tests (new file: `tests/security/`)
 
-- [ ] `test_token_not_leaked_in_logs` — verify OTP codes are masked in application logs
-- [ ] `test_error_responses_no_stack_traces` — verify 500 responses don't leak internals
-- [ ] `test_sql_injection_attempts` — parameterized inputs rejected safely
-- [ ] `test_xss_in_shop_name` — HTML in shop name is escaped/sanitized
-- [ ] `test_cors_headers` — correct CORS headers on API responses
-- [ ] `test_rate_limit_on_brute_force` — repeated invalid OTP attempts throttled (if implemented)
-- [ ] `test_jwt_expired_token` — expired JWT → 401
-- [ ] `test_jwt_invalid_audience` — wrong audience → 401
-- [ ] `test_race_condition_conversions` — concurrent validations on same QRCode handled safely
-- [ ] `test_idor_cross_company_access` — user from company A cannot access company B resources
+> Full spec: [security.md](security.md). Structure:
+
+- `tests/security/test_token_handling.py` — OTP/short token leakage (3 tests)
+- `tests/security/test_error_hardening.py` — no stack traces, debug disabled (6 tests)
+- `tests/security/test_idor.py` — cross-company IDOR + enumeration resistance (12 tests)
+- `tests/security/test_jwt_validation.py` — expiry, audience, signature (10 tests)
+- `tests/security/test_race_conditions.py` — concurrent validate, token gen, invite accept (5 tests)
+- `tests/security/test_input_sanitization.py` — SQL injection, XSS, large payloads (9 tests)
+- `tests/security/test_cors_headers.py` — CORS preflight + disallowed origins (3 tests)
 
 ### 10. New Service Tests
 
@@ -165,7 +174,9 @@
 
 ### 11. Quality & Contract Tests
 
-- [ ] `make test-contract` target — run Schemathesis locally against mock API
+- [x] `make test-contract` target — run Schemathesis locally (committed to repo `Makefile`)
+- [x] `make lint-oa` — run Spectral as build step (committed to repo `Makefile`)
+- [x] `make validate-spec` — OpenAPI structural validation (committed to repo `Makefile`)
 - [ ] OpenAPI lint check in CI — run Spectral as build step (not just staging)
 - [ ] Test coverage reporting — add `pytest-cov` to requirements, enforce minimum threshold
 
@@ -203,8 +214,19 @@
 
 ## Success Criteria for IND-38
 
-1. [ ] Coverage report consolidated (this document)
-2. [ ] All identified gaps categorized with priority
-3. [ ] New test proposals listed per service/domain
-4. [ ] This specification committed to `indiqr-spec/behavior/tests.md`
-5. [ ] Child issues created for implementation of P1 gaps
+1. [x] Coverage report consolidated (this document)
+2. [x] All identified gaps categorized with priority
+3. [x] New test proposals listed per service/domain
+4. [x] This specification committed to `indiqr-spec/behavior/tests.md`
+5. [x] Child issues created for P1 and P2 implementation
+
+## P2 Implementation Progress (IND-41)
+
+| Area | Spec Document | Status |
+|------|-------------|--------|
+| Membership Requests E2E | [membership-requests.md](membership-requests.md) | Spec complete |
+| Shop Media E2E | [shop-media.md](shop-media.md) | Spec complete |
+| Redemptions E2E | [redemptions.md](redemptions.md) § Testes | Spec complete (P1) |
+| Security Tests | [security.md](security.md) | Spec complete |
+| Contract Tests | `Makefile` (`test-contract`, `lint-oa`) | Committed |
+| Implementation | `api-indiqr` repo | Pending child issues |
