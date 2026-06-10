@@ -238,6 +238,77 @@ components:
         page_size: { type: integer }
         pages:     { type: integer }
 
+    # ── Redemptions (Resgates) ────────────────────────────────────────────────
+    RedemptionTokenCreate:
+      type: object
+      required: [valor, tipo]
+      properties:
+        valor:
+          type: number
+          format: float
+          exclusiveMinimum: 0
+        tipo:
+          type: string
+          enum: [reais, pontos]
+
+    RedemptionToken:
+      type: object
+      required: [id, influenciador_id, valor, tipo, code, status, expires_at, created_at]
+      properties:
+        id:              { type: integer }
+        influenciador_id: { type: integer }
+        valor:           { type: number }
+        tipo:            { type: string, enum: [reais, pontos] }
+        code:            { type: string, minLength: 6, maxLength: 6, pattern: '^\d{6}$' }
+        status:          { type: string, enum: [pendente, usado, expirado] }
+        expires_at:      { type: string, format: date-time }
+        created_at:      { type: string, format: date-time }
+
+    RedemptionBalance:
+      type: object
+      required: [saldo_reais, saldo_pontos]
+      properties:
+        saldo_reais:  { type: number }
+        saldo_pontos: { type: number }
+
+    RedemptionPreview:
+      type: object
+      required: [influenciador_email, valor, tipo]
+      properties:
+        influenciador_email: { type: string, format: email }
+        valor:               { type: number }
+        tipo:                { type: string, enum: [reais, pontos] }
+
+    RedemptionValidateRequest:
+      type: object
+      required: [code]
+      properties:
+        code: { type: string, minLength: 6, maxLength: 6, pattern: '^\d{6}$' }
+
+    Redemption:
+      type: object
+      required: [id, resgate_token_id, influenciador_id, vendedor_id, valor, tipo, created_at]
+      properties:
+        id:                { type: integer }
+        resgate_token_id:  { type: integer }
+        influenciador_id:  { type: integer }
+        vendedor_id:       { type: integer }
+        valor:             { type: number }
+        tipo:              { type: string, enum: [reais, pontos] }
+        created_at:        { type: string, format: date-time }
+
+    PaginatedRedemption:
+      type: object
+      required: [items, total, page, page_size, pages]
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/Redemption' }
+        total:     { type: integer }
+        page:      { type: integer }
+        page_size: { type: integer }
+        pages:     { type: integer }
+
     # ── Erros ─────────────────────────────────────────────────────────────────
     Error:
       type: object
@@ -793,3 +864,239 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/PaginatedConversion' }
+
+  # ── Redemptions (Resgates) ────────────────────────────────────────────────────
+  /redemptions/balance:
+    get:
+      tags: [Redemptions]
+      summary: Saldo disponível do influenciador (R$ e pontos)
+      responses:
+        '200':
+          description: Saldo atual
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RedemptionBalance' }
+        '403':
+          description: Apenas influenciador pode acessar
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /redemptions/tokens:
+    post:
+      tags: [Redemptions]
+      summary: Gerar código OTP de resgate (influenciador)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RedemptionTokenCreate' }
+      responses:
+        '201':
+          description: Token de resgate criado
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RedemptionToken' }
+        '403':
+          description: Apenas influenciador pode gerar código de resgate
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '422':
+          description: Saldo insuficiente, valor ≤ 0, ou tipo inválido
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /redemptions/tokens/active:
+    get:
+      tags: [Redemptions]
+      summary: Token de resgate ativo do influenciador autenticado
+      responses:
+        '200':
+          description: Token ativo
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RedemptionToken' }
+        '404':
+          description: Nenhum token ativo
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /redemptions/tokens/{token_id}:
+    delete:
+      tags: [Redemptions]
+      summary: Cancelar token de resgate pendente (influenciador)
+      parameters:
+        - name: token_id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Token cancelado
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RedemptionToken' }
+        '403':
+          description: Token pertence a outro influenciador
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '404':
+          description: Token não encontrado
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '422':
+          description: Token já expirado ou usado
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /redemptions/preview:
+    get:
+      tags: [Redemptions]
+      summary: Visualizar resgate antes da confirmação (vendedor)
+      parameters:
+        - name: code
+          in: query
+          required: true
+          schema:
+            type: string
+            minLength: 6
+            maxLength: 6
+            pattern: '^\d{6}$'
+      responses:
+        '200':
+          description: Dados do resgate
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RedemptionPreview' }
+        '404':
+          description: Código inválido
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '422':
+          description: Código expirado ou já utilizado
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /redemptions/validate:
+    post:
+      tags: [Redemptions]
+      summary: Confirmar resgate e debitar saldo (vendedor)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RedemptionValidateRequest' }
+      responses:
+        '201':
+          description: Resgate registrado
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Redemption' }
+        '403':
+          description: Vendedor = Influenciador, ou empresa diferente
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '404':
+          description: Código não encontrado
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '422':
+          description: Código expirado, já usado, ou saldo insuficiente (race)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /redemptions/:
+    get:
+      tags: [Redemptions]
+      summary: Listar resgates (filtrado por role)
+      parameters:
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: page_size
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        '200':
+          description: Lista paginada de resgates
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PaginatedRedemption' }
+
+  /redemptions/company:
+    get:
+      tags: [Redemptions]
+      summary: Listar todos os resgates da empresa (admin)
+      parameters:
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: page_size
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        '200':
+          description: Lista paginada de resgates da empresa
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PaginatedRedemption' }
+        '403':
+          description: Apenas admin da empresa
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /redemptions/{redemption_id}:
+    get:
+      tags: [Redemptions]
+      summary: Detalhe de um resgate específico
+      parameters:
+        - name: redemption_id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Resgate
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Redemption' }
+        '403':
+          description: Resgate de outro usuário
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '404':
+          description: Resgate não encontrado
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
