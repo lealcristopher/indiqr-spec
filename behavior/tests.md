@@ -137,6 +137,26 @@
 - [ ] `test_reorder_product_gallery` — PUT reorder
 - [ ] `test_shop_full_media_flow` — complete shop lifecycle
 
+#### Shop Deploy — Privacy Tests (`tests/e2e/test_shop_deploy.py`)
+
+> Spec: [shop-media.md](shop-media.md) § Deploy da Vitrine. Valida requisitos LGPD da vitrine pública.
+
+- [ ] `test_deploy_shop_success` — Admin confirma publicacao com versao correta → 201. Resposta contem `deploy_url` e `consent_record`.
+- [ ] `test_deploy_shop_without_confirmation` — `confirmou_publicacao: false` → 422. Mensagem menciona confirmacao obrigatoria.
+- [ ] `test_deploy_shop_invalid_policy_version` — Versao da politica invalida → 422.
+- [ ] `test_deploy_shop_not_admin` — Influenciador ou vendedor → 403.
+- [ ] `test_deploy_shop_unauthenticated` — Sem token → 401.
+- [ ] `test_deploy_shop_wrong_handle` — Handle de vitrine de outra empresa → 404.
+- [ ] `test_deploy_records_consent_timestamp` — Verificar que `consentiu_shop_publicacao_at` e gerado no momento do deploy.
+- [ ] `test_redeploy_updates_deployed_at` — Redeploy atualiza `deployed_at` e registra novo consentimento.
+- [ ] `test_deployed_site_contains_privacy_link` — HTML gerado contem link para politica de privacidade do IndiQR.
+- [ ] `test_deployed_site_contains_dpo_contact` — HTML gerado contem `privacidade@indiqr.lealcyber.com`.
+- [ ] `test_deployed_site_contains_controller_info` — HTML gerado contem texto sobre relacao controlador/operador.
+- [ ] `test_deployed_site_contains_no_cookies_notice` — HTML gerado contem aviso de ausencia de cookies de rastreamento.
+- [ ] `test_deployed_site_contains_company_name` — HTML gerado contem nome da empresa.
+- [ ] `test_deploy_sends_notification_email` — Admin recebe email `send_shop_deployed` apos publicacao.
+- [ ] `test_deploy_shop_without_media` — Vitrine sem midia pode ser publicada normalmente.
+
 ### 9. Security Tests (new file: `tests/security/`)
 
 > Full spec: [security.md](security.md). Structure:
