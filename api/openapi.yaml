@@ -96,10 +96,10 @@ components:
       type: object
       properties:
         type:
-          allOf:
-            - $ref: '#/components/schemas/ConsentType'
+          type: string
+          enum: [privacy_policy, shop_publication, transactional_emails]
           default: privacy_policy
-          description: Qual tipo de consentimento revogar. Default: privacy_policy.
+          description: "Qual tipo de consentimento revogar. Default: privacy_policy."
 
     ConsentRevokedResponse:
       type: object
