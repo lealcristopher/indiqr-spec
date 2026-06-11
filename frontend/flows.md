@@ -172,6 +172,113 @@ Admin → painel da empresa → aba Membros
 
 ---
 
+---
+
+## Fluxo 7 — Consentimento de Privacidade (Primeiro Login)
+
+```
+Usuário faz login via Auth0 (qualquer role)
+    ↓
+Callback → GET /user/me → consentiu_privacy_policy == false
+    ↓
+Tela de aceite bloqueante (modal full-screen)
+    ↓
+Exibe:
+  - Título: "Política de Privacidade"
+  - Resumo dos pontos principais (dados coletados, finalidade, direitos)
+  - Link: "Ler política completa" → /privacidade
+    ↓
+Usuário clica "Aceitar"
+    ↓
+PUT /user/me/consent { privacy_policy_version: "v2.0" }
+    ↓
+consentiu_privacy_policy = true
+    ↓
+Redireciona para dashboard da role
+```
+
+> **Nota:** Sem consentimento, o usuário não consegue acessar nenhuma funcionalidade
+> além da tela de aceite. A proteção é implementada no frontend via guard de rota que
+> verifica `consentiu_privacy_policy` após `GET /user/me`.
+
+---
+
+## Fluxo 8 — Renovação de Consentimento (Política Atualizada)
+
+```
+Usuário faz login (qualquer role)
+    ↓
+GET /user/me → privacy_policy_version < current_version
+    ↓
+Banner no topo (não bloqueante, mas persistente):
+  "Nossa Política de Privacidade foi atualizada. Leia as mudanças e aceite para continuar."
+    ↓
+Usuário clica no banner → modal com diff/resumo das alterações
+    ↓
+Link: "Ver política completa" → /privacidade
+    ↓
+Botão "Aceitar nova versão"
+    ↓
+PUT /user/me/consent { privacy_policy_version: "v2.1" }
+    ↓
+Banner desaparece, usuário continua normalmente
+```
+
+---
+
+## Fluxo 9 — Consentimento para Deploy de Vitrine (Shop)
+
+```
+Admin → /loja/config → Botão "Publicar"
+    ↓
+Modal de consentimento:
+  - Título: "Confirmação de Publicação"
+  - Lista dos dados que ficarão públicos:
+    • Nome da empresa
+    • Email de contato
+    • Instagram
+    • WhatsApp
+    • Logo e imagens
+    • Produtos e categorias
+  - Checkbox: "Declaro que li e aceito a Política de Privacidade e autorizo
+    a publicação destes dados publicamente."
+  - Link para política de privacidade
+    ↓
+Admin marca checkbox e clica "Publicar"
+    ↓
+Registra consentimento do shop + deploy
+    ↓
+Redireciona para preview da vitrine publicada
+```
+
+---
+
+## Fluxo 10 — Revogação de Consentimento
+
+```
+Usuário → /perfil → Aba Privacidade
+    ↓
+Seção "Consentimento":
+  - Status atual: "Consentiu em [data] — versão [v]" ou "Não consentiu"
+  - Link para política de privacidade
+  - Botão "Revogar consentimento"
+    ↓
+Modal de confirmação:
+  "Ao revogar, seus dados não serão mais tratados para finalidades que dependem
+   de consentimento. Registros anteriores permanecem por obrigação legal.
+   Deseja continuar?"
+    ↓
+Usuário confirma
+    ↓
+DELETE /user/me/consent
+    ↓
+consentiu_privacy_policy = false
+    ↓
+Redireciona para tela de aceite (Fluxo 7)
+```
+
+---
+
 ## Navegação por Role
 
 ```

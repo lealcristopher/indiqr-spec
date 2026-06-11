@@ -26,11 +26,137 @@ components:
     # ── Usuário ──────────────────────────────────────────────────────────────
     User:
       type: object
-      required: [id, email, roles]
+      required: [id, email, roles, consentiu_privacy_policy]
       properties:
         id:     { type: integer }
         email:  { type: string, format: email }
         roles:  { type: array, items: { type: string } }
+        consentiu_privacy_policy:    { type: boolean }
+        consentiu_privacy_policy_at: { type: string, format: date-time, nullable: true }
+        privacy_policy_version:      { type: string, nullable: true }
+
+    ConsentType:
+      type: string
+      enum: [privacy_policy, shop_publication, transactional_emails]
+      description: |
+        Tipo de consentimento:
+        - `privacy_policy` — aceite da política de privacidade
+        - `shop_publication` — autorização para vitrine pública (Shop)
+        - `transactional_emails` — recebimento de emails transacionais
+
+    ConsentRecord:
+      type: object
+      required: [type, granted, granted_at]
+      properties:
+        type:
+          $ref: '#/components/schemas/ConsentType'
+        granted:    { type: boolean }
+        version:    { type: string, nullable: true }
+        granted_at: { type: string, format: date-time }
+        ip_address: { type: string, nullable: true }
+
+    ConsentListResponse:
+      type: object
+      required: [consents]
+      properties:
+        consents:
+          type: array
+          items:
+            $ref: '#/components/schemas/ConsentRecord'
+
+    ConsentRequest:
+      type: object
+      required: [privacy_policy_version]
+      properties:
+        privacy_policy_version:
+          type: string
+          minLength: 1
+        types:
+          type: array
+          items:
+            $ref: '#/components/schemas/ConsentType'
+          default:
+            - privacy_policy
+          description: "Tipos de consentimento a registrar"
+
+    ConsentResponse:
+      type: object
+      required: [consentiu_privacy_policy, consentiu_privacy_policy_at, privacy_policy_version, consents]
+      properties:
+        consentiu_privacy_policy:    { type: boolean }
+        consentiu_privacy_policy_at: { type: string, format: date-time }
+        privacy_policy_version:      { type: string }
+        ip_address:                  { type: string, nullable: true }
+        consents:
+          type: array
+          items:
+            $ref: '#/components/schemas/ConsentRecord'
+
+    ConsentRevokeRequest:
+      type: object
+      properties:
+        type:
+          type: string
+          enum: [privacy_policy, shop_publication, transactional_emails]
+          default: privacy_policy
+          description: Qual tipo de consentimento revogar
+
+    ConsentRevokedResponse:
+      type: object
+      required: [type, granted, revoked_at]
+      properties:
+        type:
+          $ref: '#/components/schemas/ConsentType'
+        granted:       { type: boolean }
+        revoked_at:    { type: string, format: date-time }
+        previous_version:  { type: string, nullable: true }
+        cascade_effects:
+          type: array
+          items: { type: string }
+          description: |
+            Ações disparadas em cascata pela revogação:
+            - `shop_unpublished` — vitrine foi despublicada (quando type=shop_publication)
+            - `transactional_emails_stopped` — emails transacionais desativados (quando type=transactional_emails)
+            - `privacy_policy_revoked` — consentimento base LGPD revogado
+
+    AuditLogEntry:
+      type: object
+      required: [id, action, usuario_id, created_at]
+      properties:
+        id:          { type: integer }
+        action:      { type: string, enum: [consent_granted, consent_revoked] }
+        usuario_id:  { type: integer }
+        consent_type: { $ref: '#/components/schemas/ConsentType' }
+        ip_address:  { type: string, nullable: true }
+        metadata:    { type: object, nullable: true, properties: { privacy_policy_version: { type: string } } }
+        created_at:  { type: string, format: date-time }
+
+    # ── Privacy Request (LGPD Art. 18) ──────────────────────────────────────
+    PrivacyRequest:
+      type: object
+      required: [tipo, descricao]
+      properties:
+        tipo:
+          type: string
+          enum: [acesso, correcao, exclusao, portabilidade, revogacao, reclamacao]
+        descricao:
+          type: string
+          minLength: 10
+          maxLength: 2000
+        email_contato:
+          type: string
+          format: email
+          nullable: true
+
+    PrivacyRequestResponse:
+      type: object
+      required: [id, tipo, status, created_at]
+      properties:
+        id:         { type: integer }
+        tipo:       { type: string, enum: [acesso, correcao, exclusao, portabilidade, revogacao, reclamacao] }
+        status:     { type: string, enum: [aberto, em_andamento, concluido] }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
 
     # ── Company ───────────────────────────────────────────────────────────────
     Company:
@@ -309,6 +435,54 @@ components:
         page_size: { type: integer }
         pages:     { type: integer }
 
+    # ── Shop (Vitrine) ────────────────────────────────────────────────────────
+    Shop:
+      type: object
+      required: [id, handle, name, company_id, created_at]
+      properties:
+        id:             { type: integer }
+        handle:         { type: string }
+        name:           { type: string }
+        tagline:        { type: string, nullable: true }
+        email:          { type: string, format: email, nullable: true }
+        instagram_url:  { type: string, format: uri, nullable: true }
+        whatsapp_url:   { type: string, format: uri, nullable: true }
+        company_id:     { type: integer }
+        deployed_at:    { type: string, format: date-time, nullable: true }
+        deploy_url:     { type: string, format: uri, nullable: true }
+        created_at:     { type: string, format: date-time }
+        updated_at:     { type: string, format: date-time }
+
+    ShopDeployRequest:
+      type: object
+      required: [confirmou_publicacao, privacy_policy_version]
+      properties:
+        confirmou_publicacao:
+          type: boolean
+          description: Admin declara estar ciente da exposicao publica dos dados
+        privacy_policy_version:
+          type: string
+          minLength: 1
+
+    ShopDeployResponse:
+      type: object
+      required: [handle, deploy_url, deployed_at, consent_record]
+      properties:
+        handle:      { type: string }
+        deploy_url:  { type: string, format: uri }
+        deployed_at: { type: string, format: date-time }
+        consent_record:
+          $ref: '#/components/schemas/ShopDeployConsent'
+
+    ShopDeployConsent:
+      type: object
+      required: [consentiu_shop_publicacao, consentiu_shop_publicacao_at, privacy_policy_version]
+      properties:
+        consentiu_shop_publicacao:     { type: boolean }
+        consentiu_shop_publicacao_at:  { type: string, format: date-time }
+        privacy_policy_version:        { type: string }
+        ip_address:                    { type: string, nullable: true }
+
     # ── Erros ─────────────────────────────────────────────────────────────────
     Error:
       type: object
@@ -347,6 +521,116 @@ paths:
               schema: { $ref: '#/components/schemas/User' }
         '401':
           description: Não autenticado
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /user/me/consent:
+    get:
+      tags: [User]
+      summary: Listar consentimentos ativos do usuário (LGPD Art. 18, IX)
+      description: |
+        Retorna todos os consentimentos ativos do usuário autenticado, com tipo,
+        versão, data de concessão e IP de origem.
+        Permite ao titular verificar quais consentimentos estão ativos — transparência
+        exigida pelo Art. 18, IX da LGPD.
+      responses:
+        '200':
+          description: Lista de consentimentos ativos
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ConsentListResponse' }
+        '401':
+          description: Não autenticado
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+    put:
+      tags: [User]
+      summary: Registrar consentimento com a política de privacidade (LGPD Art. 8)
+      description: |
+        Registra que o usuário autenticado consentiu com a versão especificada da política de privacidade.
+        Opcionalmente registra consentimento para tipos adicionais (shop_publication, transactional_emails).
+        Gera entrada de auditoria com IP, versão, tipo de consentimento e timestamp.
+        Consentimentos repetidos para mesma versão e tipo são idempotentes (200).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ConsentRequest' }
+      responses:
+        '200':
+          description: Consentimento registrado
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ConsentResponse' }
+        '401':
+          description: Não autenticado
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+    delete:
+      tags: [User]
+      summary: Revogar consentimento (LGPD Art. 8, §5)
+      description: |
+        Revoga o consentimento do usuário autenticado para o tipo especificado.
+        A revogação deve ser tão fácil quanto a concessão (LGPD Art. 8, §5).
+
+        Efeitos em cascata por tipo de consentimento:
+        - `privacy_policy`: campo `consentiu_privacy_policy` = false. Bloqueia operações que dependem de consentimento LGPD.
+        - `shop_publication`: despublica a vitrine do usuário se for o último consentimento de vitrine ativo.
+        - `transactional_emails`: interrompe envio de emails transacionais para o titular.
+
+        A revogação não apaga dados já processados sob consentimento anterior (Art. 8, §5:
+        não compromete a licitude do tratamento anterior). Para exclusão, use `DELETE /user/me`.
+        Uma entrada de auditoria é gerada com `action = consent_revoked`.
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ConsentRevokeRequest' }
+      responses:
+        '200':
+          description: Consentimento revogado
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ConsentRevokedResponse' }
+        '401':
+          description: Não autenticado
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '422':
+          description: Tipo de consentimento não encontrado ou já revogado
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  # ── Privacy (LGPD) ────────────────────────────────────────────────────────
+  /privacy/request:
+    post:
+      tags: [Privacy]
+      summary: Solicitação de direitos do titular (LGPD Arts. 18, 41)
+      description: |
+        Canal público para titulares de dados exercerem seus direitos previstos
+        no Art. 18 da LGPD. A solicitação é registrada com tracking de status
+        e notifica automaticamente o DPO via email.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PrivacyRequest' }
+      responses:
+        '201':
+          description: Solicitação registrada com sucesso
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PrivacyRequestResponse' }
+        '422':
+          description: Dados inválidos (tipo inválido, descrição muito curta)
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
@@ -1097,6 +1381,96 @@ paths:
               schema: { $ref: '#/components/schemas/Error' }
         '404':
           description: Resgate não encontrado
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  # ── Shop (Vitrine) ───────────────────────────────────────────────────────────────
+  /shop/mine:
+    get:
+      tags: [Shop]
+      summary: Vitrine do admin autenticado
+      description: Retorna dados completos da vitrine (shop), incluindo URLs publicas de midia.
+      responses:
+        '200':
+          description: Vitrine do admin
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Shop' }
+        '401':
+          description: Nao autenticado
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '403':
+          description: Apenas admin pode gerenciar a vitrine
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '404':
+          description: Vitrine nao criada
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /shop/{handle}/deploy:
+    post:
+      tags: [Shop]
+      summary: Publicar vitrine como site estatico (LGPD Arts. 7, I; 9; 20)
+      description: |
+        Gera e publica o site estatico da vitrine em Cloudflare R2, tornando os dados
+        da empresa publicamente acessiveis e indexaveis em `{SHOP_BASE_URL}/{handle}/`.
+
+        **Requisitos de privacidade (LGPD):**
+        - Antes do deploy, o admin deve confirmar que esta ciente da exposicao publica
+        - O consentimento e registrado com timestamp, versao da politica e IP
+        - O site estatico gerado DEVE incluir:
+          - Link para a politica de privacidade do IndiQR
+          - Informacao de que a pagina e operada pela empresa-cliente via IndiQR (relacao controlador/operador)
+          - Contato do DPO: `privacidade@indiqr.lealcyber.com`
+          - Aviso sobre ausencia de cookies de rastreamento
+
+        **Dados expostos publicamente:**
+        - Nome da empresa, tagline
+        - URLs de Instagram e WhatsApp
+        - Email de contato da vitrine
+        - Nomes, descricoes e precos (em pontos) dos produtos
+        - Imagens de logo, hero, categorias e produtos
+      parameters:
+        - name: handle
+          in: path
+          required: true
+          schema:
+            type: string
+            minLength: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ShopDeployRequest' }
+      responses:
+        '201':
+          description: Site publicado com sucesso
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ShopDeployResponse' }
+        '401':
+          description: Nao autenticado
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '403':
+          description: Apenas admin da empresa pode publicar a vitrine
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '404':
+          description: Vitrine nao encontrada para este handle
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '422':
+          description: Admin nao confirmou publicacao ou versao da politica invalida
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
