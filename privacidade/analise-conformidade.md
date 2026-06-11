@@ -17,8 +17,8 @@ A plataforma IndiQR implementa **boas práticas de segurança** (RBAC, JWT valid
 | # | Requisito | api-indiqr | indiqr-shop-frontend | Status |
 |---|-----------|------------|----------------------|--------|
 | 1 | Finalidade e base legal documentadas | Documentado na Política (não no código) | — | C |
-| 2 | Consentimento explícito para dados sensíveis | Não implementado | Não implementado | D |
-| 3 | Mecanismo de revogação de consentimento | Não implementado | Não implementado | D |
+| 2 | Consentimento explícito para dados sensíveis | Especificado (F1) | Não implementado | C |
+| 3 | Mecanismo de revogação de consentimento | Especificado (F3) | Não implementado | C |
 | 4 | Exclusão / anonimização de dados pessoais | Não implementado (não há endpoint) | — | D |
 | 5 | Exportação / portabilidade de dados | Não implementado (não há endpoint) | — | D |
 | 6 | Transparência — link para política | Não implementado | Não implementado | D |
@@ -34,7 +34,7 @@ A plataforma IndiQR implementa **boas práticas de segurança** (RBAC, JWT valid
 | 16 | Retenção — limpeza automática | Não implementado | — | D |
 | 17 | Compartilhamento — inventário de terceiros | Documentado na Política (não no código) | — | C |
 | 18 | Cookies — ausência de tracking | Sem cookies de tracking ou analytics | Sem cookies de tracking ou analytics | A |
-| 19 | DPO — canal de contato | Não implementado na plataforma | — | D |
+| 19 | DPO — canal de contato | Em implementação ([IND-54](/IND/issues/IND-54)) | — | C→B |
 | 20 | Vitrine pública — consentimento explícito | Não implementado (deploy é silencioso) | — | D |
 
 **Legenda:** A = Conforme | B = Parcialmente conforme | C = Documentado mas não implementado | D = Não conforme / Não implementado

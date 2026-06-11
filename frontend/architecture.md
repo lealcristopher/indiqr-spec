@@ -56,16 +56,19 @@ src/
 ├── api/               # Funções de chamada à API (um arquivo por recurso)
 │   ├── companies.ts
 │   ├── campaigns.ts
-│   └── conversions.ts
+│   ├── conversions.ts
+│   └── privacy.ts     # POST /privacy/request
 ├── components/        # Componentes reutilizáveis
 │   ├── ui/            # shadcn/ui (gerados)
-│   └── shared/        # Componentes do domínio (CampaignCard, StatusBadge, Pagination, etc.)
+│   ├── shared/        # Componentes do domínio (CampaignCard, StatusBadge, Pagination, etc.)
+│   └── layout/        # Layout components (Footer, AppShell)
+│       └── Footer.tsx # DPO contact + privacy policy links (LGPD Art. 41)
 ├── hooks/             # Custom hooks (useCurrentUser, useRoles, usePaginatedQuery, etc.)
 ├── pages/             # Uma pasta por rota
 │   ├── admin/
 │   ├── influencer/
 │   ├── seller/
-│   └── public/        # Convite preview (sem auth)
+│   └── public/        # Convite preview, política de privacidade, solicitação de direitos
 ├── router/            # Definição de rotas + guards por role
 ├── store/             # Estado global mínimo (ex: empresa selecionada)
 └── lib/               # axios instance, auth0 config, zod schemas, types
@@ -169,6 +172,48 @@ O fluxo do vendedor é mobile-first e deve funcionar com conexão instável:
 - Service worker em modo `networkFirst` para as chamadas de API
 - Cache offline da shell da aplicação
 - Tela de instalação sugerida no primeiro acesso mobile
+
+---
+
+## Footer (LGPD Art. 41)
+
+Todas as telas da plataforma devem incluir o componente `<Footer />` no root layout:
+
+```tsx
+// src/components/layout/Footer.tsx
+function Footer() {
+  return (
+    <footer className="border-t bg-muted/50 py-4 mt-auto">
+      <div className="container flex flex-col sm:flex-row items-center justify-between gap-2 text-sm text-muted-foreground">
+        <span>IndiQR &copy; {new Date().getFullYear()}</span>
+        <nav className="flex gap-4">
+          <a href="mailto:privacidade@indiqr.lealcyber.com" className="hover:underline">
+            Contato do DPO
+          </a>
+          <a href="/privacidade/solicitacao" className="hover:underline">
+            Seus Direitos (LGPD)
+          </a>
+          <a
+            href="https://indiqr.lealcyber.com/privacidade/politica-de-privacidade.html"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hover:underline"
+          >
+            Política de Privacidade
+          </a>
+        </nav>
+      </div>
+    </footer>
+  );
+}
+```
+
+**Regras:**
+- Footer visível em todas as rotas (públicas e protegidas), sem exceção
+- Incluído no `AppShell` ou componente root de layout que envolve `<Outlet />`
+- Links do DPO e LGPD abrem na mesma aba (rotas SPA); política de privacidade abre em nova aba
+- Responsivo: empilhado em mobile, lado a lado em desktop
+- Fundo sutil (`bg-muted/50`) com borda superior para separação visual
 
 ---
 
