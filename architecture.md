@@ -24,7 +24,7 @@ IndiQR é uma plataforma de marketing por indicação com remuneração por conv
 |--------|-----------|
 | Runtime | Python 3.11, FastAPI, Uvicorn |
 | ORM | SQLAlchemy 2.0 |
-| Banco relacional | PostgreSQL (Neon serverless) |
+| Banco relacional | PostgreSQL (Neon serverless, região `sa-east-1` — São Paulo) |
 | Migrations | Alembic |
 | Auth | Auth0 (mesmo tenant do Recon, prefixo `indiqr-`) |
 | QRCode | `qrcode[pil]` |

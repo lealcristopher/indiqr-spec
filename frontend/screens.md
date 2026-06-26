@@ -10,6 +10,17 @@ Todas as rotas protegidas redirecionam para Auth0 Universal Login se não autent
 |------|------|-----------|
 | `/convite/:token` | Prévia do convite | Exibe nome da empresa e role. Botão "Aceitar" redireciona para login se não autenticado. |
 | `/callback` | Auth0 callback | Processa retorno do Auth0, redireciona para `/` |
+| `/privacidade/solicitacao` | Formulário de Direitos do Titular | Formulário LGPD para solicitação de acesso, correção, exclusão, portabilidade, revogação ou reclamação (Arts. 18, 41) |
+
+---
+
+## Fluxo de Consentimento (intercepta todas as rotas)
+
+| Tela | Gatilho | Descrição |
+|------|---------|-----------|
+| Aceite de Política | `consentiu_privacy_policy == false` após login | Modal full-screen bloqueante. Exibe resumo da política, link para versão completa, botão "Aceitar". PUT /user/me/consent. |
+| Banner de Atualização | `privacy_policy_version < current_version` | Banner persistente no topo informando que a política foi atualizada. Não bloqueante, mas visível em todas as telas. |
+| Revogação de Consentimento | `/perfil#privacidade` > "Revogar" | Modal de confirmação, depois DELETE /user/me/consent. Redireciona para tela de aceite. |
 
 ---
 
@@ -18,7 +29,18 @@ Todas as rotas protegidas redirecionam para Auth0 Universal Login se não autent
 | Rota | Tela | Descrição |
 |------|------|-----------|
 | `/` | Redirect inteligente | Redireciona para dashboard da role do usuário |
+| `/perfil` | Perfil do usuário | Dados do usuário, abas: Geral / Privacidade. GET /user/me. |
 | `/conversoes` | Minhas conversões | Lista paginada de conversões filtrada pela role do usuário + `<Pagination />` (20 por página) |
+
+### Tela: Perfil do Usuário
+
+- Aba Geral: email, roles (badges), data de cadastro
+- Aba Privacidade:
+  - Status do consentimento: "Consentiu em [data] — versão [v]" ou "Não consentiu"
+  - Botão "Revogar consentimento" (se consentiu)
+  - Link para política de privacidade
+  - Opção "Solicitar exportação de dados" → GET /user/me/export (ver [F4](/IND/issues/IND-54))
+  - Opção "Solicitar exclusão de dados" → DELETE /user/me (ver [F4](/IND/issues/IND-54))
 
 ---
 
@@ -35,6 +57,8 @@ Todas as rotas protegidas redirecionam para Auth0 Universal Login se não autent
 | `/campanhas/nova` | Criar campanha | `POST /campaigns/` |
 | `/campanhas/:id` | Detalhe da campanha | `GET /campaigns/:id` |
 | `/campanhas/:id/conversoes` | Conversões da campanha | `GET /campaigns/:id/conversions` |
+| `/loja/config` | Configuração da vitrine | `GET /shop/mine` |
+| `/loja/deploy` | Publicar vitrine | `POST /shop/{handle}/deploy` |
 
 ### Tela: Lista de Empresas
 - Cards com nome, slug, nº de membros, nº de campanhas ativas
@@ -80,6 +104,18 @@ Todas as rotas protegidas redirecionam para Auth0 Universal Login se não autent
 - Parâmetros imutáveis exibidos (remuneração, desconto)
 - Botão "Encerrar campanha" (apenas se não encerrada) — confirmação modal
 - Aba Conversões: tabela paginada com vendedor, valor bruto, desconto, remuneração, data + `<Pagination />` (20 por página)
+
+### Tela: Configuração da Vitrine (Loja)
+- Formulário de configuração da loja: nome, email, Instagram, WhatsApp
+- Upload de mídia (logo, hero, categorias, produtos)
+- Botão "Publicar" que aciona modal de consentimento
+
+### Modal: Consentimento de Publicação (antes do deploy)
+- Lista explícita dos dados que ficarão públicos na vitrine
+- Checkbox obrigatório: "Autorizo a publicação destes dados conforme a Política de Privacidade"
+- Link para política de privacidade
+- Botão "Publicar" habilitado apenas após checkbox marcado
+- Ao confirmar: registra consentimento + executa deploy
 
 ---
 
@@ -158,6 +194,65 @@ Todas as rotas protegidas redirecionam para Auth0 Universal Login se não autent
 - Cada item: campanha, influenciador, valor bruto, desconto, remuneração, data
 - Somente leitura
 - Paginação: `<Pagination />` (20 por página)
+
+---
+
+## Tela: Formulário de Direitos do Titular (LGPD)
+
+**Rota:** `/privacidade/solicitacao` (pública)
+**Endpoint:** `POST /privacy/request`
+
+### Layout
+
+- Cabeçalho: "Seus Direitos — Lei Geral de Proteção de Dados"
+- Subtítulo: "Preencha o formulário abaixo para exercer seus direitos previstos no Art. 18 da LGPD"
+- Card centralizado com formulário e fundo `bg-card`
+
+### Campos
+
+| Campo | Tipo | Validação | Descrição |
+|-------|------|-----------|-----------|
+| Tipo de solicitação | Radio group | Obrigatório | 6 opções com ícone, label em português e breve descrição |
+| Descrição | Textarea | 10-2000 caracteres | Detalhamento livre do pedido |
+| Email de contato | Input email | Formato email, obrigatório se anônimo | Preenchido automaticamente e desabilitado se usuário autenticado |
+
+### Opções de Tipo (radio group)
+
+```
+( ) Acesso — Confirmar existência de tratamento e acessar meus dados
+( ) Correção — Corrigir dados incompletos, inexatos ou desatualizados
+( ) Exclusão — Solicitar exclusão de dados desnecessários ou excessivos
+( ) Portabilidade — Exportar meus dados para outro fornecedor
+( ) Revogação — Revogar consentimento previamente concedido
+( ) Reclamação — Registrar reclamação sobre o tratamento dos dados
+```
+
+### Comportamento
+
+1. **Submissão:** botão "Enviar Solicitação" → `POST /privacy/request`
+2. **Sucesso (201):**
+   - Tela de confirmação com check verde e número de protocolo
+   - Texto: "Solicitação #123 registrada. O DPO responderá em até 15 dias úteis no email informado."
+   - Botão "Nova Solicitação" para reiniciar o formulário
+3. **Erro de validação (422):**
+   - Mensagens inline por campo: "A descrição deve ter no mínimo 10 caracteres", "Tipo de solicitação é obrigatório"
+4. **Erro de rede:**
+   - Toast: "Erro ao enviar solicitação. Tente novamente." + botão retry
+5. **Email (opcional se autenticado):**
+   - O campo `email_contato` só é obrigatório para usuários NÃO autenticados
+   - Se autenticado, o email é extraído do JWT e o campo aparece preenchido e desabilitado com label "Email (da sua conta)"
+   - Se anônimo, campo ativo com placeholder "seu@email.com" e label "Email para contato"
+
+### Estados de UI
+
+| Estado | Comportamento |
+|--------|--------------|
+| Default | Formulário limpo, nenhum tipo selecionado |
+| Validação | Erros inline nos campos, submit habilitado apenas com formulário válido |
+| Submitting | Botão "Enviando..." com spinner, campos desabilitados |
+| Sucesso | Card de confirmação com número de protocolo e instruções |
+| Erro de rede | Toast com botão retry, formulário mantém dados preenchidos |
+| Erro 422 | Campos com erro mantêm valor, mensagens de validação exibidas |
 
 ---
 

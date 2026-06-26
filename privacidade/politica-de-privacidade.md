@@ -1,6 +1,6 @@
 # Política de Privacidade — IndiQR
 
-**Última atualização:** 10 de junho de 2026
+**Última atualização:** 11 de junho de 2026
 
 ---
 
@@ -75,18 +75,46 @@ Estes dados ficam acessíveis publicamente em `{SHOP_BASE_URL}/{handle}/` e inde
 
 ### 4.1 Suboperadores (data processors)
 
-| Terceiro | Dados compartilhados | Finalidade | Localização |
-|----------|---------------------|------------|-------------|
-| **Auth0** (Okta, Inc.) | `email`, `auth_id`, roles | Autenticação e autorização | EUA / Global |
-| **Resend** (Resend, Inc.) | `email` do destinatário, conteúdo do email | Envio de emails transacionais | EUA |
-| **Cloudflare R2** (Cloudflare, Inc.) | Imagens da vitrine, dados públicos do site estático | Armazenamento de mídia e entrega de conteúdo | Global (CDN) |
-| **Grafana Cloud** (Grafana Labs) | Logs de aplicação (path, client_ip, status_code) e traces OTel | Observabilidade e diagnóstico | EUA / Global |
-| **Neon** (Neon, Inc.) — produção | Todos os dados da plataforma | Banco de dados PostgreSQL serverless | Definido pelo cliente (região AWS) |
-| **Akeyless** (Akeyless Security) | Nenhum dado de usuário — credenciais de infraestrutura apenas | Gerenciamento de segredos | Definido pelo cliente |
+| Terceiro | Dados compartilhados | Finalidade | Localização | DPA |
+|----------|---------------------|------------|-------------|-----|
+| **Auth0** (Okta, Inc.) | `email`, `auth_id`, roles | Autenticação e autorização | EUA / Global | [DPA Okta](https://www.okta.com/agreements/data-processing-addendum/) |
+| **Resend** (Resend, Inc.) | `email` do destinatário, conteúdo do email | Envio de emails transacionais | EUA | [DPA Resend](https://resend.com/legal/dpa) |
+| **Cloudflare R2** (Cloudflare, Inc.) | Imagens da vitrine, dados públicos do site estático | Armazenamento de mídia e entrega de conteúdo | Global (CDN) | [DPA Cloudflare](https://www.cloudflare.com/cloudflare-customer-dpa/) |
+| **Grafana Cloud** (Grafana Labs) | Logs de aplicação (path, client_ip, status_code) e traces OTel | Observabilidade e diagnóstico | EUA / Global | [DPA Grafana](https://grafana.com/legal/dpa/) |
+| **Neon** (Neon, Inc.) — produção | Todos os dados da plataforma | Banco de dados PostgreSQL serverless | Definido pelo cliente (região AWS) | [DPA Neon](https://neon.tech/legal/dpa) |
+| **Akeyless** (Akeyless Security) | Nenhum dado de usuário — credenciais de infraestrutura apenas | Gerenciamento de segredos | Definido pelo cliente | N/A (não processa PII) |
+
+O registro completo de DPAs, incluindo mecanismos de transferência, certificações e status de vigência, está disponível no [Registro de DPAs](https://github.com/lealcristopher/indiqr-spec/blob/main/privacidade/dpas/README.md). Consulte tambem o [Inventario de Suboperadores](https://github.com/lealcristopher/indiqr-spec/blob/main/privacidade/suboperadores.md) para detalhamento tecnico dos fluxos de dados.
 
 ### 4.2 Transferência internacional
 
-Alguns suboperadores estão sediados nos Estados Unidos ou operam infraestrutura global. O IndiQR adota as salvaguardas contratuais adequadas (cláusulas-padrão de proteção de dados) e exige que todos os suboperadores mantenham padrões de segurança compatíveis com a LGPD.
+Alguns suboperadores estão sediados nos Estados Unidos ou operam infraestrutura global. Para assegurar nível adequado de proteção aos dados pessoais transferidos para fora do Brasil, o IndiQR adota os seguintes mecanismos de salvaguarda, em conformidade com o Art. 33 da LGPD:
+
+#### 4.2.1 Mecanismos de transferência vigentes
+
+| Mecanismo | Descrição | Base LGPD | Suboperadores cobertos |
+|-----------|-----------|-----------|----------------------|
+| **EU Standard Contractual Clauses (EU SCCs)** | Cláusulas-padrão contratuais aprovadas pela Comissão Europeia (Decisão 2021/914), incorporadas aos DPAs de cada suboperador | Art. 33, II, "b" | Auth0, Resend, Cloudflare R2, Grafana Cloud, Neon |
+| **EU-US Data Privacy Framework (DPF)** | Certificação de proteção adequada sob o DPF, reconhecido pelo U.S. Department of Commerce | Art. 33, II, "a" | Auth0 (Okta), Cloudflare R2 |
+| **Residência de dados no Brasil** | Dados armazenados em território nacional (Neon região `sa-east-1`, São Paulo), sem transferência internacional | Art. 33, caput — não há transferência | Neon (recomendação) |
+
+#### 4.2.2 Situação por suboperador
+
+| Suboperador | País sede | Mecanismo primário | Mecanismo secundário |
+|-------------|-----------|-------------------|---------------------|
+| Auth0 (Okta) | EUA | EU-US DPF | EU SCCs |
+| Resend | EUA | EU SCCs | DPF (em verificação) |
+| Cloudflare R2 | EUA | EU-US DPF | EU SCCs + Global PRP |
+| Grafana Cloud | EUA | EU SCCs | — |
+| Neon | EUA (configurável) | Residência de dados (`sa-east-1`) | EU SCCs |
+| Akeyless | Israel/EUA | N/A — não processa dados pessoais | — |
+
+#### 4.2.3 Compromissos adicionais
+
+- **Notificação de mudanças:** Os DPAs com cada suboperador preveem notificação prévia em caso de adição ou substituição de subprocessadores (14 a 30 dias de antecedência)
+- **Revisão periódica:** Os DPAs e certificações DPF são revisados anualmente ou sempre que houver alteração material nos serviços ou na estrutura societária do fornecedor
+- **Due diligence:** Todos os suboperadores são avaliados quanto a certificações de segurança (SOC 2, ISO 27001) e conformidade com GDPR/LGPD antes da contratação
+- **Cláusulas-padrão da ANPD:** Tão logo a ANPD publique as cláusulas-padrão brasileiras previstas no Art. 35 da LGPD, o IndiQR avaliará a adoção complementar dessas cláusulas, sem prejuízo dos mecanismos já vigentes
 
 ### 4.3 Compartilhamento legal
 

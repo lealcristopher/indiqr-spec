@@ -1,0 +1,7 @@
+# DPAs executados sao documentos contratuais confidenciais.
+# Apenas o README.md de rastreamento e commitado no repositorio publico.
+# Copias dos DPAs executados devem ser armazenadas em repositorio interno seguro.
+
+*
+!.gitignore
+!README.md

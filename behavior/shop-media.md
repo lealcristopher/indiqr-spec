@@ -234,6 +234,68 @@ com URLs públicas de todas as mídias.
 
 ---
 
+## Deploy da Vitrine — Consentimento e Privacidade (LGPD)
+
+### Visão Geral
+
+`POST /shop/{handle}/deploy` publica a vitrine como site estático em Cloudflare R2.
+O site fica acessível em `{SHOP_BASE_URL}/{handle}/` e é indexável por mecanismos de busca.
+
+Antes da publicação, o admin deve confirmar que está ciente da exposição pública dos dados.
+O consentimento é registrado com timestamp, versão da política e IP.
+
+### Requisitos de Privacidade — Conteúdo do Site Estático
+
+O site estático gerado pelo deploy **DEVE** incluir obrigatoriamente:
+
+| Elemento | Descrição | Obrigatório |
+|----------|-----------|-------------|
+| Link política de privacidade | URL para `https://app.indiqr.com.br/privacidade/politica-de-privacidade.html` | Sim |
+| Info controlador/operador | Texto: "Esta página é operada por {company_name} via IndiQR (LealCyber). O IndiQR atua como operador de dados, nos termos da LGPD." | Sim |
+| Contato DPO | Email: `privacidade@indiqr.lealcyber.com` | Sim |
+| Aviso cookies | Texto: "Esta vitrine não utiliza cookies de rastreamento ou publicidade." | Sim |
+| Rodapé IndiQR | "Powered by IndiQR" com link para `https://indiqr.com.br` | Recomendado |
+
+### Fluxo de Deploy
+
+```
+Admin → POST /shop/{handle}/deploy
+         Body: { confirmou_publicacao: true, privacy_policy_version: "10 de junho de 2026" }
+       → Sistema valida:
+         1. Admin é dono da vitrine (company_id)
+         2. `confirmou_publicacao` === true
+         3. `privacy_policy_version` é uma versão válida da política
+       → Sistema:
+         1. Registra consentimento (ShopDeployConsent): timestamp, versão, IP
+         2. Gera HTML estático com dados da vitrine + requisitos de privacidade
+         3. Publica em Cloudflare R2 (`{SHOP_BASE_URL}/{handle}/`)
+         4. Atualiza shop.deployed_at e shop.deploy_url
+         5. Envia email de confirmação (send_shop_deployed)
+       → Retorna: ShopDeployResponse { handle, deploy_url, deployed_at, consent_record }
+```
+
+### Regras de Negócio — Deploy
+
+- Apenas admin (`indiqr-admin`) pode publicar a vitrine
+- `confirmou_publicacao` DEVE ser `true`; se `false` → 422
+- `privacy_policy_version` deve corresponder a uma versão publicada da política
+- Redeploy (republicação) é permitido — atualiza `deployed_at` e registra novo consentimento
+- Cada deploy gera um novo registro de consentimento (auditável)
+- Vitrine sem mídia (logo, hero, produtos) pode ser publicada — o HTML gerado simplesmente não incluirá esses elementos
+- O deploy de uma vitrine já publicada substitui o site existente (sobrescreve em R2)
+
+### Respostas de Erro — Deploy
+
+| Situação | HTTP | Detalhe |
+|----------|------|---------|
+| Não autenticado | 401 | Token ausente ou inválido |
+| Não é admin | 403 | Apenas admin pode publicar a vitrine |
+| Vitrine não encontrada | 404 | Handle não pertence ao admin |
+| `confirmou_publicacao` === false | 422 | Admin deve confirmar publicação |
+| `privacy_policy_version` inválida | 422 | Versão da política não reconhecida |
+
+---
+
 ## Dependências de Infraestrutura
 
 - **Object storage mock** para testes E2E: usar `moto` (S3 mock) ou
