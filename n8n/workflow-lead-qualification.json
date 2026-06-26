@@ -1,0 +1,113 @@
+{
+  "name": "Chat Qualificação de Leads",
+  "nodes": [
+    {
+      "id": "webhook-in",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 300],
+      "parameters": {
+        "path": "lead-chat",
+        "options": {}
+      },
+      "webhookId": "lead-chat"
+    },
+    {
+      "id": "fetch-template",
+      "name": "Buscar Template Email",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [450, 300],
+      "parameters": {
+        "method": "GET",
+        "url": "https://private.indiqr.com.br/email/template_lead_qualification.html",
+        "options": {
+          "response": {
+            "responseFormat": "string"
+          }
+        }
+      }
+    },
+    {
+      "id": "prepare-email",
+      "name": "Preparar Dados do Email",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 2,
+      "position": [650, 300],
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "htmlContent",
+              "value": "={{ $json['data'].replace('{%NOME%}', $items('Webhook').first().json.lead.nome).replace('{%URL_CTA%}', 'https://private.indiqr.com.br/preview/ebooks/marketing_de_indicacao.html') }}"
+            },
+            {
+              "name": "leadEmail",
+              "value": "={{ $items('Webhook').first().json.lead.email }}"
+            },
+            {
+              "name": "leadName",
+              "value": "={{ $items('Webhook').first().json.lead.nome }}"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "send-email",
+      "name": "Enviar Email Lead",
+      "type": "n8n-nodes-resend.resend",
+      "typeVersion": 1,
+      "position": [850, 300],
+      "parameters": {
+        "resource": "email",
+        "operation": "send",
+        "to": "={{ $json['leadEmail'] }}",
+        "subject": "Obrigado pelo seu interesse na IndiQR!",
+        "html": "={{ $json['htmlContent'] }}",
+        "from": "IndiQR <onboarding@resend.dev>"
+      }
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Buscar Template Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar Template Email": {
+      "main": [
+        [
+          {
+            "node": "Preparar Dados do Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar Dados do Email": {
+      "main": [
+        [
+          {
+            "node": "Enviar Email Lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "timezone": "America/Sao_Paulo"
+  },
+  "tags": ["lead", "qualificacao", "email-automatico"],
+  "active": true
+}
