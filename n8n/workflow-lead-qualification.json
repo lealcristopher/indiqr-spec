@@ -5,7 +5,7 @@
       "id": "webhook-in",
       "name": "Webhook",
       "type": "n8n-nodes-base.webhook",
-      "typeVersion": 1,
+      "typeVersion": 2.1,
       "position": [250, 300],
       "parameters": {
         "path": "lead-chat",
@@ -17,14 +17,14 @@
       "id": "fetch-template",
       "name": "Buscar Template Email",
       "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
+      "typeVersion": 4.4,
       "position": [450, 300],
       "parameters": {
         "method": "GET",
         "url": "https://private.indiqr.com.br/email/template_lead_qualification.html",
         "options": {
           "response": {
-            "responseFormat": "string"
+            "responseFormat": "text"
           }
         }
       }
@@ -33,14 +33,14 @@
       "id": "prepare-email",
       "name": "Preparar Dados do Email",
       "type": "n8n-nodes-base.set",
-      "typeVersion": 2,
+      "typeVersion": 3.4,
       "position": [650, 300],
       "parameters": {
         "values": {
           "string": [
             {
               "name": "htmlContent",
-              "value": "={{ $json['data'].replace('{%NOME%}', $items('Webhook').first().json.lead.nome).replace('{%URL_CTA%}', 'https://private.indiqr.com.br/preview/ebooks/marketing_de_indicacao.html') }}"
+              "value": "={{ $json.data.replace('{%NOME%}', $items('Webhook').first().json.lead.nome).replace('{%URL_CTA%}', 'https://private.indiqr.com.br/preview/ebooks/marketing_de_indicacao.html') }}"
             },
             {
               "name": "leadEmail",
@@ -63,9 +63,9 @@
       "parameters": {
         "resource": "email",
         "operation": "send",
-        "to": "={{ $json['leadEmail'] }}",
+        "to": "={{ $json.leadEmail }}",
         "subject": "Obrigado pelo seu interesse na IndiQR!",
-        "html": "={{ $json['htmlContent'] }}",
+        "html": "={{ $json.htmlContent }}",
         "from": "IndiQR <onboarding@resend.dev>"
       }
     }
